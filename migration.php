@@ -1,9 +1,13 @@
 <?php
+echo "Migration started\n";
+$time_start = microtime(true);
+
 require_once('autoloader.php');
 
 $dbmodel = new \models\db();
 $db = $dbmodel->getDb();
 
+echo "Creating tables\n";
 $db->query("CREATE TABLE IF NOT EXISTS beers (id INT, brewery_id INT, name VARCHAR(255), cat_id INT, style_id INT,
   abv DOUBLE, ibu DOUBLE, srm DOUBLE, upc INT, filepath VARCHAR(255), descript TEXT, add_user INT,
   last_mod VARCHAR(255), PRIMARY KEY (id))");
@@ -22,9 +26,12 @@ $db->query("CREATE TABLE IF NOT EXISTS geocodes (id INT, brewery_id INT, latitud
 $db->query("CREATE TABLE IF NOT EXISTS styles (id INT, cat_id INT, style_name VARCHAR(255),
   last_mod VARCHAR(255), PRIMARY KEY (id))");
 
-//$files = array('beers', 'breweries', 'categories', 'geocodes', 'styles');
-$files = array('beers');
+$files = array('beers', 'breweries', 'categories', 'geocodes', 'styles');
 insertToDB($db, $files);
+
+$time_end = microtime(true);
+$time = $time_end - $time_start;
+echo "Migration finished in " . $time . " seconds\n";
 
 /**
  * Insert data from resources folder to database
@@ -34,55 +41,21 @@ insertToDB($db, $files);
 function insertToDB($db, $files)
 {
     foreach ($files as $name) {
-        $data = array_map('str_getcsv', file('resources/' . $name . '.csv'));
-        $data = fixArray($data);
-        $query = generateInsertQuery($data, $name);
-        $db->query($query);
-    }
-}
-
-/**
- * Fix array got from csv when descriptions adds new lines
- * @param array $data
- * @return array
- */
-function fixArray($data)
-{
-    $results = array();
-    $temp = array();
-    $count = count($data[0]);
-    foreach ($data as $key => $line){
-        if (count($line) == $count) {
-            $results[$key] = $line;
-        }
-        else {
-            if (!empty($temp)){
-                if (count($line) == 1) {
-                    if (reset($line) != null) {
-                        $temp[count($temp)-1] .= reset($line);
-                    }
-                } else {
-                    $temp[count($temp)-1] .= reset($line);
-                    unset($line[0]);
-                    $temp = array_merge($temp, $line);
-                }
-                if (count($temp) == $count){
-                    $results[$key] = $temp;
-                    $temp = array();
-                }
-//                elseif (count($temp) > $count) {
-//                    $temp = array();
-//                }
-            } else {
-                $temp = $line;
+        echo "Inserting " . $name . " into database\n";
+        $file = fopen('resources/' . $name . '.csv', 'r');
+        $data = array();
+        while(! feof($file))
+        {
+            $row = fgetcsv($file);
+            if ($row != false) {
+                array_push($data, $row);
             }
         }
 
-        if ($key == 7774){
-            break;
-        }
+        fclose($file);
+        $query = generateInsertQuery($data, $name);
+        $db->query($query);
     }
-    return $results;
 }
 
 /**
