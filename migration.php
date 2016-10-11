@@ -31,7 +31,7 @@ insertToDB($db, $files);
 
 $time_end = microtime(true);
 $time = $time_end - $time_start;
-echo "Migration finished in " . $time . " seconds\n";
+echo "Migration finished in " . round($time, 4) . " seconds\n";
 
 /**
  * Insert data from resources folder to database
