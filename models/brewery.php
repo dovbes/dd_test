@@ -276,17 +276,17 @@ class brewery
             // Finds distances to (next brewery + home) from current position
             $query = "SELECT temp.*, temp.distnext + temp.disthome as distance FROM
             (SELECT geocodes.brewery_id, geocodes.latitude, geocodes.longitude,
-            (3959 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
+            (6371 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
             cos(radians(geocodes.longitude) - radians(?)) + sin(radians(?)) *
             sin(radians(geocodes.latitude)))) AS distnext,
-            (3959 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
+            (6371 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
             cos(radians(geocodes.longitude) - radians(?)) + sin(radians(?)) *
             sin(radians(geocodes.latitude)))) AS disthome, breweries.name
             FROM geocodes, breweries WHERE geocodes.brewery_id = breweries.id ";
         } else {
             // Finds distances to next brewery from current position (home)
             $query = "SELECT geocodes.brewery_id, geocodes.latitude, geocodes.longitude,
-            (3959 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
+            (6371 * acos(cos(radians(?)) * cos(radians(geocodes.latitude)) *
             cos(radians(geocodes.longitude) - radians(?)) + sin(radians(?)) *
             sin(radians(geocodes.latitude)))) AS distance, breweries.name
             FROM geocodes, breweries WHERE geocodes.brewery_id = breweries.id ";
