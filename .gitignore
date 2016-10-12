@@ -1,1 +1,5 @@
+### Editors.
+/.idea/*
+/.settings/*
+
 config.ini
