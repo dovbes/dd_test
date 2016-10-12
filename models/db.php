@@ -4,24 +4,9 @@ namespace models;
 class db
 {
     /**
-     * @var string
+     * @var array
      */
-    static public $host = "localhost";
-
-    /**
-     * @var string
-     */
-    static public $username = "test";
-
-    /**
-     * @var string
-     */
-    static public $password = "test";
-
-    /**
-     * @var string
-     */
-    static public $dbname = 'dd_test';
+    private $config;
 
     /**
      * @var object
@@ -33,7 +18,18 @@ class db
      */
     public function __construct()
     {
-        $db = new \mysqli(self::$host, self::$username, self::$password, self::$dbname);
+        $this->loadConfig();
+        $config = $this->config;
+
+        if (!isset($config) || empty($config)) {
+            throw new \Exception('Could not load config file.');
+        }
+
+        $db = new \mysqli($config['host'], $config['username'], $config['password'], $config['dbname']);
+
+        if ($db->connect_error) {
+            throw new \Exception('Database connection failed: ' . $db->connect_error);
+        }
 
         $this->setDb($db);
     }
@@ -54,5 +50,13 @@ class db
     public function setDb($db)
     {
         $this->db = $db;
+    }
+
+    /**
+     * Load config file and set it to private variable
+     */
+    private function loadConfig()
+    {
+        $this->config = parse_ini_file('\config.ini', true);
     }
 }
