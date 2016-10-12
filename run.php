@@ -1,9 +1,9 @@
 <?php
 require_once('autoloader.php');
 
-$dbmodel = new \models\db();
-$db = $dbmodel->getDb();
-$distance = 2000;
+$dbModel = new \models\db();
+$db = $dbModel->getDb();
+$distMax = 2000;
 $visited = array();
 $start = microtime(true);
 
@@ -20,7 +20,7 @@ try {
 
         echo "HOME: " . $lat . ", " . $long . " distance 0km\n";
 
-        getBreweries($lat, $long, $distance, $visited);
+        getBreweries($lat, $long, $distMax, $visited);
     } else {
         throw new Exception('Please enter two parameters latitude and longitude! Example: "php run.php 51.355468 11.100790".');
     }
@@ -35,7 +35,7 @@ try {
  * @param int $distance
  * @param array $visited
  */
-function getBreweries($lat, $long, $distance, $visited)
+function getBreweries($lat, $long, $distMax, $visited)
 {
     global $db;
     $query = "SELECT geocodes.brewery_id, geocodes.latitude, geocodes.longitude,
@@ -51,7 +51,7 @@ function getBreweries($lat, $long, $distance, $visited)
     $query .= " HAVING distance < ? ORDER BY distance LIMIT 0 , 1";
 
     $stmt = $db->prepare($query);
-    $stmt->bind_param('dddd', $lat, $long, $lat, $distance);
+    $stmt->bind_param('dddi', $lat, $long, $lat, $distMax);
     $stmt->execute();
     $result = $stmt->get_result();
     $stmt->close();
@@ -64,8 +64,22 @@ function getBreweries($lat, $long, $distance, $visited)
         array_push($visited, $row['brewery_id']);
         $coords = array("lathome" => $lat, "latlast" => $row['latitude'],
             "longhome" => $long, "longlast" => $row['longitude']);
-        $disrem = $distance - ceil($row['distance']);
-        getBreweriesLoop($coords, $disrem, $row['distance'], $visited);
+
+        $distHome = ceil($row['distance']);
+        $distRem = $distMax - $distHome;
+
+        $loopResults = array();
+
+        while ($loopResults !== false) {
+            $loopResults = getBreweriesLoop($coords, $distRem, $distHome, $visited);
+
+            if ($loopResults !== false) {
+                $coords = $loopResults[0];
+                $distRem = $loopResults[1];
+                $distHome = $loopResults[2];
+                $visited = $loopResults[3];
+            }
+        }
     } else {
         global $start;
         $end = microtime(true);
@@ -81,7 +95,7 @@ function getBreweries($lat, $long, $distance, $visited)
  * @param int $disthome
  * @param array $visited
  */
-function getBreweriesLoop($coords, $distance, $disthome, $visited)
+function getBreweriesLoop($coords, $distRem, $distHome, $visited)
 {
     global $db;
     $query = "SELECT temp.*, temp.distnext + temp.disthome as distance FROM
@@ -101,8 +115,8 @@ function getBreweriesLoop($coords, $distance, $disthome, $visited)
     $query .= ") as temp HAVING distance < ? ORDER BY distance LIMIT 0 , 1";
 
     $stmt = $db->prepare($query);
-    $stmt->bind_param('ddddddd', $coords['latlast'], $coords['longlast'], $coords['latlast'],
-        $coords['lathome'], $coords['longhome'], $coords['lathome'], $distance);
+    $stmt->bind_param('ddddddi', $coords['latlast'], $coords['longlast'], $coords['latlast'],
+        $coords['lathome'], $coords['longhome'], $coords['lathome'], $distRem);
     $stmt->execute();
     $result = $stmt->get_result();
     $stmt->close();
@@ -115,16 +129,23 @@ function getBreweriesLoop($coords, $distance, $disthome, $visited)
         $coords['latlast'] = $row['latitude'];
         $coords['longlast'] = $row['longitude'];
         array_push($visited, $row['brewery_id']);
-        $disrem = $distance - ceil($row['distnext']);
-        getBreweriesLoop($coords, $disrem, ceil($row['disthome']), $visited);
+        $distHome = ceil($row['distnext']);
+        $distRem = $distRem - $distHome;
+
+        $loopResults = array($coords, $distRem, $distHome, $visited);
+        return $loopResults;
     } else {
-        global $start;
-        echo "HOME: " . $coords['lathome'] . ", " . $coords['longhome'] . " distance " .  $disthome. "km\n";
+        global $start, $distMax;
+        echo "HOME: " . $coords['lathome'] . ", " . $coords['longhome'] . " distance " .  $distHome. "km\n";
+        $distRem = $distRem - $distHome;
         $end = microtime(true);
         $time = $end - $start;
-        echo "Algorithm finished in " . round($time, 4) . "s. Visited " . count($visited) . " breweries!\n\n";
+        echo "Algorithm finished in " . round($time, 4) . "s. Visited " . count($visited) .
+            " breweries! Distance traveled: " . ($distMax-$distRem) . "km. Distance remaining: " . $distRem . "km\n\n";
 
         printBeerList($visited);
+
+        return false;
     }
 }
 
