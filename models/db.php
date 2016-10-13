@@ -22,13 +22,13 @@ class db
         $config = $this->config;
 
         if (!isset($config) || empty($config)) {
-            throw new \Exception('Could not load config file.');
+            throw new \Exception("Could not load config file.\n");
         }
 
         $db = new \mysqli($config['host'], $config['username'], $config['password'], $config['dbname']);
 
         if ($db->connect_error) {
-            throw new \Exception('Database connection failed: ' . $db->connect_error);
+            throw new \Exception("Database connection failed: " . $db->connect_error . "\n");
         }
 
         $this->setDb($db);
@@ -57,7 +57,7 @@ class db
      */
     private function loadConfig()
     {
-        $this->config = parse_ini_file('\config.ini', true);
+        $this->config = parse_ini_file('config.ini', true);
     }
 
     /**
