@@ -3,3 +3,4 @@
 /.settings/*
 
 config.ini
+docker-compose.yml

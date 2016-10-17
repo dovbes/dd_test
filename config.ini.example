@@ -1,4 +1,4 @@
-host = localhost;
+host = mysql;
 username = test;
 password = test;
 dbname = dd_test;
